@@ -146,7 +146,7 @@ button:hover {
     /* スクロール */
     padding-bottom: 20px;
     /* 指で押しやすい余白 */
-    border-top: 1px solid #e5e7eb;
+    /* border-top: 1px solid #e5e7eb; */
 }
 
 /* タブボタン */
@@ -175,6 +175,11 @@ button:hover {
 
 .tab-btn.active {
     background: #4a90e2;
+    color: #fff;
+}
+
+.tab-btn:hover{
+    background: #375b9e;
     color: #fff;
 }
 
