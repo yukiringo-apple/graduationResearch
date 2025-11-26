@@ -62,16 +62,86 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 // ▼ テキストからボタンを動的生成
 document.querySelectorAll('.kana-grid').forEach(grid => {
+  // htmlから.kana-gridの一覧をそのまま取得する
   const text = grid.textContent.trim();
-  const items = text.split(/\s+/);
+  console.log("text\n", text);
+
+  // 行ごとに分割
+  const lines = text.split(/\n+/);
+  console.log("lines", lines);
+
+  // htmlファイルの元のテキストを削除
+  grid.textContent = "";
+
+  lines.forEach(line => {
+    const row = document.createElement("div");
+    row.className = "kana-row";
+
+    const chars = line.split(/\s+/);
+    console.log("chars", chars);
+
+    chars.forEach(ch => {
+      if (ch != "") {
+        const btn = document.createElement("button");
+        btn.textContent = ch;
+        btn.onclick = () => addKana(ch);
+        row.append(btn);
+      }
+    })
+
+    grid.appendChild(row);
+  })
+
+  // const items = text.split(/\n+/);
+  // console.log("items\n", items);
+
+  // const parts = items.split(/\s+/);
+  // console.log("parts", parts);
+  // grid.textContent = ""; // 一旦消す
+
+  // items.forEach(ch => {
+  //   const button = document.createElement("button");
+  //   button.textContent = ch;
+  //   button.onclick = () => addKana(ch);
+  //   grid.appendChild(button);
+  // });
+});
+
+document.querySelectorAll('.alpha-grid').forEach(grid => {
+  const text = grid.textContent.trim();
+
+  const lines = text.split(/\n+/);
+  console.log("alpha-items\n", lines);
+
+  // const parts = items.split(/\s+/);
+  // console.log("alpha-parts\n", parts);
+
   grid.textContent = ""; // 一旦消す
 
-  items.forEach(ch => {
-    const button = document.createElement("button");
-    button.textContent = ch;
-    button.onclick = () => addKana(ch);
-    grid.appendChild(button);
-  });
+  lines.forEach(line => {
+    const row = document.createElement("div");
+    row.className = "alpha-row";
+
+    const chars = line.split(/\s+/);
+    console.log("chars", chars);
+
+    chars.forEach(ch => {
+      if (ch != "") {
+        const btn = document.createElement("button");
+        btn.textContent = ch;
+        btn.onclick = () => addKana(ch);
+        row.append(btn);
+      }
+    })
+
+    grid.appendChild(row);
+  })
+  // items.forEach(ch => {
+  //   const button = document.createElement("button");
+  //   button.textContent = ch;
+  //   button.onclick = () => addKana(ch);
+  //   grid.appendChild(button);
+  // });
 });
 
 
