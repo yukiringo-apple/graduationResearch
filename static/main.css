@@ -146,7 +146,7 @@ button:hover {
     /* スクロール */
     padding-bottom: 20px;
     /* 指で押しやすい余白 */
-    border-top: 1px solid #e5e7eb;
+    /* border-top: 1px solid #e5e7eb; */
 }
 
 /* タブボタン */
@@ -178,6 +178,11 @@ button:hover {
     color: #fff;
 }
 
+.tab-btn:hover {
+    background: #375b9e;
+    color: #fff;
+}
+
 #inputText {
     pointer-events: none;
 }
@@ -194,15 +199,23 @@ button:hover {
 /* 文字ボタンのグリッド */
 .kana-grid {
     display: grid;
+    grid-template-columns: repeat(10, auto);
     /* grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); */
     gap: 8px;
     padding: 5px 0 20px 0;
     /* 内側余白調整 */
 }
 
-.kana-grid button {
+.alpha-grid {
+    display: grid;
+    /* grid-template-rows: repeat(10,auto); */
+    gap:8px;
+    padding: 5px 0 20px 0;
+}
+
+.layout-grid button {
     padding: 12px;
-    font-size: 18px;
+    font-size: 22px;
     border: none;
     border-radius: 8px;
     background: #f3f4f6;
@@ -210,7 +223,7 @@ button:hover {
     transition: 0.2s;
 }
 
-.kana-grid button:hover {
+.layout-grid button:hover {
     background: #e5e7eb;
 }
 
@@ -218,8 +231,21 @@ button:hover {
     display: flex;
     gap: 4px;
     margin-bottom: 6px;
+    flex-direction: column
 }
 
 .kana-row button {
     padding: 6px 10px;
+}
+
+.alpha-row {
+    display: grid;
+    grid-template-columns: repeat(7,auto);
+    gap: 4px;
+    margin-bottom: 6px;
+    flex-direction: row;
+}
+
+.alpha-row button {
+    padding: 30px 10px;
 }
