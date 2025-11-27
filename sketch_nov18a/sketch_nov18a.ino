@@ -1,129 +1,184 @@
-// ====== Arduino Braille Puncher ======
-// PC(Python) からのコマンド:
-//
-// MOVE x y   → XY移動
-// PUNCH      → 打刻
-// HOME       → ホーム位置へ戻る
-// PING       → "OK" を返す（Python の接続確認）
-//
-// ======================================
+// ===== Arduino Braille Puncher (mm単位制御) =====
+#include <Arduino.h>
 
-#include <AccelStepper.h>
+// ---- Stepper設定 ----
+const long stepsPerRevolution = 4096;
+const float mmPerRev = 20.0;           
+const float stepsPerMm = stepsPerRevolution / mmPerRev;
 
-// --- モーター設定（例） ---
-AccelStepper stepperX(AccelStepper::DRIVER, 2, 5); // STEP=2, DIR=5
-AccelStepper stepperY(AccelStepper::DRIVER, 3, 6); // STEP=3, DIR=6
+// 点字間隔
+const float pitchX = 2.5; // 点字セル内横間隔（mm）
+const float pitchY = 2.6; // 点字セル内縦間隔（mm）
+const float charPitch = 6.0; // 文字間隔（mm）
 
-// 打刻ソレノイド
-const int PIN_PUNCH = 9;
+// ピン設定
+int xPins[4] = {2, 3, 4, 5};
+int yPins[4] = {A0, A1, A2, A3};
+const int SOL_PIN = 6;
+
+// 半ステップ配列
+int seq[8][4] = {
+  {1,0,0,0},{1,1,0,0},{0,1,0,0},{0,1,1,0},
+  {0,0,1,0},{0,0,1,1},{0,0,0,1},{1,0,0,1}
+};
 
 // ホームスイッチ
-const int PIN_HOME_X = 10;
-const int PIN_HOME_Y = 11;
+const int X_HOME_PIN = 7; // INPUT_PULLUP
+const int Y_HOME_PIN = 8;
 
-// 座標 → ステップ変換係数
-const float STEPS_PER_MM_X = 80;  // 例：1mm = 80step
-const float STEPS_PER_MM_Y = 80;
+// 現在位置（mm）
+float currentX = 0.0;
+float currentY = 0.0;
+float startX = 0.0;
 
-void setup() {
+// ステップインデックス
+int xStepIndex = 0;
+int yStepIndex = 0;
+
+// 安全delay
+void safeDelayMs(unsigned long ms){
+  unsigned long start = millis();
+  while(millis()-start < ms) delay(1);
+}
+
+// ステッパ制御
+void stepMotor(int motorPins[], int idx){
+  for(int i=0;i<4;i++) digitalWrite(motorPins[i], seq[idx][i]);
+}
+
+// XY同時ステップ (Bresenham方式)
+void stepXYSimultaneous(long stepsX, long stepsY, int delayMs){
+  long ax = abs(stepsX);
+  long ay = abs(stepsY);
+  int dirX = (stepsX>=0)?1:-1;
+  int dirY = (stepsY>=0)?1:-1;
+  long steps = max(ax, ay);
+  long err = 0;
+  long dx = ax;
+  long dy = ay;
+
+  for(long i=0;i<steps;i++){
+    bool doX=false, doY=false;
+    if(ax >= ay){
+      doX = (i < ax);
+      err += dy;
+      if(err >= ax){ doY = (i < ay); err -= ax; }
+    } else {
+      doY = (i < ay);
+      err += dx;
+      if(err >= ay){ doX = (i < ax); err -= ay; }
+    }
+
+    if(doX){
+      xStepIndex = (dirX==1)?(xStepIndex+1)%8:(xStepIndex-1<0?7:xStepIndex-1);
+      stepMotor(xPins, xStepIndex);
+    }
+    if(doY){
+      yStepIndex = (dirY==1)?(yStepIndex+1)%8:(yStepIndex-1<0?7:yStepIndex-1);
+      stepMotor(yPins, yStepIndex);
+    }
+    safeDelayMs(delayMs);
+  }
+  currentX += (float)stepsX/stepsPerMm;
+  currentY += (float)stepsY/stepsPerMm;
+}
+
+// 高レベル移動
+void moveTo(float targetX, float targetY, int delayMs=2){
+  long sX = round((targetX-currentX)*stepsPerMm);
+  long sY = round((targetY-currentY)*stepsPerMm);
+  stepXYSimultaneous(sX, sY, delayMs);
+}
+
+// 打刻
+void dot(){
+  digitalWrite(SOL_PIN, HIGH);
+  safeDelayMs(120);
+  digitalWrite(SOL_PIN, LOW);
+  safeDelayMs(50);
+}
+
+// ドット番号→座標
+void moveToDot(int dotNumber){
+  float tx=0, ty=0;
+  switch(dotNumber){
+    case 1: tx=0;       ty=0; break;
+    case 2: tx=0;       ty=pitchY; break;
+    case 3: tx=0;       ty=pitchY*2; break;
+    case 4: tx=pitchX;  ty=0; break;
+    case 5: tx=pitchX;  ty=pitchY; break;
+    case 6: tx=pitchX;  ty=pitchY*2; break;
+  }
+  moveTo(tx+startX, ty);
+}
+
+// 文字間移動
+void advanceChar(){ startX += charPitch; }
+// 原点復帰
+void returnHome(){ moveTo(0,0); startX=0; }
+
+// ホーミング
+void doHome(){
+  Serial.println("HOMING_START");
+
+  // ---- X軸 ----
+  int safetyCount = 0;
+  while(digitalRead(X_HOME_PIN) == HIGH){  // HIGH = 押されていない
+    xStepIndex = (xStepIndex - 1 < 0 ? 7 : xStepIndex - 1);
+    stepMotor(xPins, xStepIndex);
+    safeDelayMs(4);
+
+    if(++safetyCount > 10000){
+      Serial.println("ERROR_X_HOME_NOT_FOUND");
+      break;
+    }
+  }
+  currentX = 0;
+  startX = 0;
+
+  // ---- Y軸 ----
+  safetyCount = 0;
+  while(digitalRead(Y_HOME_PIN) == HIGH){
+    yStepIndex = (yStepIndex - 1 < 0 ? 7 : yStepIndex - 1);
+    stepMotor(yPins, yStepIndex);
+    safeDelayMs(4);
+
+    if(++safetyCount > 10000){
+      Serial.println("ERROR_Y_HOME_NOT_FOUND");
+      break;
+    }
+  }
+  currentY = 0;
+
+  Serial.println("HOMING_DONE");
+}
+
+
+// setup
+void setup(){
+  for(int i=0;i<4;i++){
+    pinMode(xPins[i], OUTPUT);
+    pinMode(yPins[i], OUTPUT);
+  }
+  pinMode(SOL_PIN, OUTPUT);
+  pinMode(X_HOME_PIN, INPUT_PULLUP);
+  pinMode(Y_HOME_PIN, INPUT_PULLUP);
+  digitalWrite(SOL_PIN, LOW);
   Serial.begin(115200);
-
-  pinMode(PIN_PUNCH, OUTPUT);
-  pinMode(PIN_HOME_X, INPUT_PULLUP);
-  pinMode(PIN_HOME_Y, INPUT_PULLUP);
-
-  stepperX.setMaxSpeed(2000);
-  stepperX.setAcceleration(2000);
-
-  stepperY.setMaxSpeed(2000);
-  stepperY.setAcceleration(2000);
-
-  homeAll();
   Serial.println("READY");
 }
 
-void loop() {
-  if (Serial.available()) {
+// loop
+void loop(){
+  if(Serial.available()){
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
-
-    // ----- PING 応答 -----
-    if (cmd == "PING") {
-      Serial.println("OK");
-    }
-
-    // ----- HOME -----
-    else if (cmd == "HOME") {
-      homeAll();
-      Serial.println("DONE");
-    }
-
-    // ----- PUNCH -----
-    else if (cmd == "PUNCH") {
-      punch();
-      Serial.println("DONE");
-    }
-
-    // ----- MOVE x y -----
-    else if (cmd.startsWith("MOVE")) {
-      float x, y;
-      sscanf(cmd.c_str(), "MOVE %f %f", &x, &y);
-      moveToXY(x, y);
-      Serial.println("DONE");
-    }
-
-    // ----- 不明コマンド -----
+    if(cmd=="HOME"){ doHome(); Serial.println("HOME_DONE"); }
+    else if(cmd=="CHAR_DONE"){ advanceChar(); Serial.println("CHAR_DONE_ACK"); }
+    else if(cmd=="ALL_DONE"){ returnHome(); Serial.println("ALL_DONE_ACK"); }
     else {
-      Serial.println("ERR");
+      int d = cmd.toInt();
+      if(d>=1 && d<=6){ moveToDot(d); dot(); Serial.println(d); }
     }
   }
 }
-
-// =============================
-//   XY 移動
-// =============================
-void moveToXY(float x_mm, float y_mm) {
-  long targetX = x_mm * STEPS_PER_MM_X;
-  long targetY = y_mm * STEPS_PER_MM_Y;
-
-  stepperX.moveTo(targetX);
-  stepperY.moveTo(targetY);
-
-  while (stepperX.distanceToGo() != 0 || stepperY.distanceToGo() != 0) {
-    stepperX.run();
-    stepperY.run();
-  }
-}
-
-// =============================
-//   打刻
-// =============================
-void punch() {
-  digitalWrite(PIN_PUNCH, HIGH);
-  delay(120);   // 打刻時間
-  digitalWrite(PIN_PUNCH, LOW);
-  delay(50);
-}
-
-// =============================
-//   ホームに戻る
-// =============================
-void homeAll() {
-  // X軸ホーム
-  stepperX.setSpeed(-500);
-  while (digitalRead(PIN_HOME_X) == HIGH) {
-    stepperX.runSpeed();
-  }
-  stepperX.setCurrentPosition(0);
-
-  // Y軸ホーム
-  stepperY.setSpeed(-500);
-  while (digitalRead(PIN_HOME_Y) == HIGH) {
-    stepperY.runSpeed();
-  }
-  stepperY.setCurrentPosition(0);
-
-  delay(200);
-  Serial.println("HOME_OK");
-}
-
