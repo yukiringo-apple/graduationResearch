@@ -7,9 +7,9 @@ const float mmPerRev = 20.0;
 const float stepsPerMm = stepsPerRevolution / mmPerRev;
 
 // 点字間隔
-const float pitchX = 2.5; // 点字セル内横間隔（mm）
-const float pitchY = 2.6; // 点字セル内縦間隔（mm）
-const float charPitch = 6.0; // 文字間隔（mm）
+const float pitchX = 2.5; 
+const float pitchY = 2.6; 
+const float charPitch = 6.0;
 
 // ピン設定
 int xPins[4] = {2, 3, 4, 5};
@@ -46,7 +46,35 @@ void stepMotor(int motorPins[], int idx){
   for(int i=0;i<4;i++) digitalWrite(motorPins[i], seq[idx][i]);
 }
 
-// XY同時ステップ (Bresenham方式)
+// X軸ステップ
+void stepX(long steps, int delayMs=2){
+  int dir = (steps >= 0) ? 1 : -1;
+  long n = abs(steps);
+  Serial.print("stepX: "); Serial.println(steps);
+  for(long i=0;i<n;i++){
+    xStepIndex = (dir == 1) ? (xStepIndex + 1) % 8 : (xStepIndex - 1 < 0 ? 7 : xStepIndex - 1);
+    stepMotor(xPins, xStepIndex);
+    safeDelayMs(delayMs);
+  }
+  currentX += (float)steps / stepsPerMm;
+  Serial.print("currentX: "); Serial.println(currentX);
+}
+
+// Y軸ステップ
+void stepY(long steps, int delayMs=2){
+  int dir = (steps >= 0) ? 1 : -1;
+  long n = abs(steps);
+  Serial.print("stepY: "); Serial.println(steps);
+  for(long i=0;i<n;i++){
+    yStepIndex = (dir == 1) ? (yStepIndex + 1) % 8 : (yStepIndex - 1 < 0 ? 7 : yStepIndex - 1);
+    stepMotor(yPins, yStepIndex);
+    safeDelayMs(delayMs);
+  }
+  currentY += (float)steps / stepsPerMm;
+  Serial.print("currentY: "); Serial.println(currentY);
+}
+
+// XY同時ステップ (Bresenham)
 void stepXYSimultaneous(long stepsX, long stepsY, int delayMs){
   long ax = abs(stepsX);
   long ay = abs(stepsY);
@@ -98,8 +126,44 @@ void dot(){
   safeDelayMs(50);
 }
 
+// X軸だけ原点へ
+void returnXOnly() {
+    unsigned long start = millis();
+    while(digitalRead(X_HOME_PIN) == HIGH){
+        xStepIndex = (xStepIndex-1<0?7:xStepIndex-1);
+        stepMotor(xPins, xStepIndex);
+        safeDelayMs(4);
+        if(millis()-start > 3000) break;  // 3秒で強制停止
+    }
+    currentX = 0;
+    startX = 0;
+    Serial.println("X_HOME_DONE");
+}
+
+
+void returnYOnly() {
+    unsigned long start = millis();
+    while(digitalRead(Y_HOME_PIN) == HIGH){
+        yStepIndex = (yStepIndex-1<0?7:yStepIndex-1);
+        stepMotor(yPins, yStepIndex);
+        safeDelayMs(4);
+        if(millis()-start > 3000) break;  // 3秒で強制停止
+    }
+    currentY = 0;
+    Serial.println("Y_HOME_DONE");
+}
+
+
+
+// XY両方原点へ
+void returnHomeXY(){
+  returnXOnly();
+returnYOnly();
+
+}
+
 // ドット番号→座標
-void moveToDot(int dotNumber){
+float moveToDot(int dotNumber, bool useStartX=true){
   float tx=0, ty=0;
   switch(dotNumber){
     case 1: tx=0;       ty=0; break;
@@ -109,49 +173,68 @@ void moveToDot(int dotNumber){
     case 5: tx=pitchX;  ty=pitchY; break;
     case 6: tx=pitchX;  ty=pitchY*2; break;
   }
-  moveTo(tx+startX, ty);
+  float targetX = tx + (useStartX ? startX : 0);
+  moveTo(targetX, ty);
+}
+
+const float DOT1_OFFSET_X = -0.5;  // 左上の手前 0.5mm
+const float DOT1_OFFSET_Y = -0.5;
+
+void returnToDot1(){
+    // 1番点座標に移動（X/Y共に startX/startYを無視）
+    moveToDot(1, false); 
+    
+    // X/Y軸ともに少し手前で止める
+    moveTo(currentX + DOT1_OFFSET_X, currentY + DOT1_OFFSET_Y);
+    
+    // 文字列開始位置リセット
+    startX = 0;
+    currentX = 0;
+    currentY = 0;
+    
+    Serial.println("Returned to Dot1 (with offset)");
 }
 
 // 文字間移動
-void advanceChar(){ startX += charPitch; }
-// 原点復帰
-void returnHome(){ moveTo(0,0); startX=0; }
-
-// ホーミング
-void doHome(){
-  Serial.println("HOMING_START");
-
-  // ---- X軸 ----
-  int safetyCount = 0;
-  while(digitalRead(X_HOME_PIN) == HIGH){  // HIGH = 押されていない
-    xStepIndex = (xStepIndex - 1 < 0 ? 7 : xStepIndex - 1);
-    stepMotor(xPins, xStepIndex);
-    safeDelayMs(4);
-
-    if(++safetyCount > 10000){
-      Serial.println("ERROR_X_HOME_NOT_FOUND");
-      break;
-    }
-  }
-  currentX = 0;
-  startX = 0;
-
-  // ---- Y軸 ----
-  safetyCount = 0;
-  while(digitalRead(Y_HOME_PIN) == HIGH){
-    yStepIndex = (yStepIndex - 1 < 0 ? 7 : yStepIndex - 1);
-    stepMotor(yPins, yStepIndex);
-    safeDelayMs(4);
-
-    if(++safetyCount > 10000){
-      Serial.println("ERROR_Y_HOME_NOT_FOUND");
-      break;
-    }
-  }
-  currentY = 0;
-
-  Serial.println("HOMING_DONE");
+void advanceChar() {
+    startX += charPitch;
+    Serial.print("Advanced to X: ");
+    Serial.println(startX);
 }
+
+
+// 原点復帰（XY両方）
+void returnHome() {
+    moveTo(0,0);
+    startX = 0;
+}
+
+
+void doHome(){
+    // ---- X軸 ----
+    if(currentX != 0){
+        while(digitalRead(X_HOME_PIN) == HIGH){
+            xStepIndex = (xStepIndex - 1 < 0 ? 7 : xStepIndex - 1);
+            stepMotor(xPins, xStepIndex);
+            safeDelayMs(4);
+        }
+        currentX = 0;
+        startX = 0;
+    }
+
+    // ---- Y軸 ----
+    if(currentY != 0){
+        while(digitalRead(Y_HOME_PIN) == HIGH){
+            yStepIndex = (yStepIndex - 1 < 0 ? 7 : yStepIndex - 1);
+            stepMotor(yPins, yStepIndex);
+            safeDelayMs(4);
+        }
+        currentY = 0;
+    }
+
+    Serial.println("HOMING_DONE");
+}
+
 
 
 // setup
@@ -169,16 +252,19 @@ void setup(){
 }
 
 // loop
-void loop(){
+void loop() {
   if(Serial.available()){
     String cmd = Serial.readStringUntil('\n');
     cmd.trim();
-    if(cmd=="HOME"){ doHome(); Serial.println("HOME_DONE"); }
-    else if(cmd=="CHAR_DONE"){ advanceChar(); Serial.println("CHAR_DONE_ACK"); }
-    else if(cmd=="ALL_DONE"){ returnHome(); Serial.println("ALL_DONE_ACK"); }
+    if(cmd=="HOME") doHome();
+    else if(cmd=="X_HOME") returnXOnly();
+    else if(cmd=="Y_HOME") returnYOnly();
+    else if(cmd=="DOT1") returnToDot1();   // ←追加
+    else if(cmd=="CHAR_DONE") advanceChar();
+    else if(cmd=="ALL_DONE") returnHome();
     else {
       int d = cmd.toInt();
-      if(d>=1 && d<=6){ moveToDot(d); dot(); Serial.println(d); }
+      if(d>=1 && d<=6){ moveToDot(d); dot(); }
     }
   }
 }

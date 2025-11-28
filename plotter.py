@@ -116,20 +116,36 @@ def send_char(ch, numeric_mode, english_mode):
     # 英字モードも数字モードも解除
     return False, False
 
+def send_char_with_advance(ch, numeric_mode, english_mode):
+    numeric_mode, english_mode = send_char(ch, numeric_mode, english_mode)
+    if ser is not None:
+        ser.write(b"CHAR_DONE\n")  # Arduino側で advanceChar() が呼ばれる
+        time.sleep(0.05)           # 移動時間待機
+    return numeric_mode, english_mode
 
-# --- 整文送信 ---
+
 def send_braille_data(braille_data):
-
     numeric_mode = False
     english_mode = False
 
     for item in braille_data:
         ch = item["char"]
-        numeric_mode, english_mode = send_char(ch, numeric_mode, english_mode)
+        numeric_mode, english_mode = send_char_with_advance(ch, numeric_mode, english_mode)
 
-    ser.write(b"HOME\n")
-    time.sleep(2)
-    print("原点へ戻しました")
+    # 打刻後、左上の六点1番目に戻る
+    if ser is not None:
+        ser.write(b"DOT1\n")
+        time.sleep(1)
+        print("Returned to Dot 1")
+        
+    return_to_dot1()  # 打刻後に六点1番目に戻る
+
+def return_to_dot1():
+    """打刻後、六点1番目（左上）に戻る"""
+    if ser is not None:
+        ser.write(b"DOT1\n")  # Arduino 側で startX=0 にして左上へ
+        time.sleep(1)          # 移動完了まで少し待つ
+        print("Returned to Dot 1")
 
 
 # --- 履歴IDから送信 ---
