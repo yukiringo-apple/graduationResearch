@@ -33,11 +33,24 @@ async function sendText() {
   document.getElementById("result").innerText = result.message;
 }
 
-// ひらがなのみか判定する関数
-function checkHiragana(input) {
-  const hiraganaRegex = /^[ぁ-ん0-9a-z！？!?,.、。ーっ]+$/;
-  return hiraganaRegex.test(input);
+function checkInput(input) {
+  // ① 使用可能な文字だけかチェック（一次フィルタ）
+  const allowRegex = /^[0-9a-zA-Zａ-ｚＡ-Ｚぁ-ゖ！？!?,.、。ーっ]+$/;
+
+  if (!allowRegex.test(input)) return false;
+
+  // ② 小文字（ぁぃぅぇぉ）の禁止
+  const smallVowelRegex = /[ぁぃぅぇぉ]/;
+  if (smallVowelRegex.test(input)) return false;
+
+  // ③ 拗音の不正組み合わせを禁止
+  // 許可：きぎしじちぢにひびみり + ゃゅょ のみ
+  const invalidYouonRegex = /(?<![きぎしじちぢにひびぴみり])[ゃゅょ]/;
+  if (invalidYouonRegex.test(input)) return false;
+
+  return true;
 }
+
 
 
 // ▼ 入力欄に追加
@@ -91,20 +104,6 @@ document.querySelectorAll('.kana-grid').forEach(grid => {
 
     grid.appendChild(row);
   })
-
-  // const items = text.split(/\n+/);
-  // console.log("items\n", items);
-
-  // const parts = items.split(/\s+/);
-  // console.log("parts", parts);
-  // grid.textContent = ""; // 一旦消す
-
-  // items.forEach(ch => {
-  //   const button = document.createElement("button");
-  //   button.textContent = ch;
-  //   button.onclick = () => addKana(ch);
-  //   grid.appendChild(button);
-  // });
 });
 
 document.querySelectorAll('.alpha-grid').forEach(grid => {
@@ -112,9 +111,6 @@ document.querySelectorAll('.alpha-grid').forEach(grid => {
 
   const lines = text.split(/\n+/);
   console.log("alpha-items\n", lines);
-
-  // const parts = items.split(/\s+/);
-  // console.log("alpha-parts\n", parts);
 
   grid.textContent = ""; // 一旦消す
 
@@ -136,12 +132,6 @@ document.querySelectorAll('.alpha-grid').forEach(grid => {
 
     grid.appendChild(row);
   })
-  // items.forEach(ch => {
-  //   const button = document.createElement("button");
-  //   button.textContent = ch;
-  //   button.onclick = () => addKana(ch);
-  //   grid.appendChild(button);
-  // });
 });
 
 
@@ -178,3 +168,19 @@ function clearAll() {
   const input = document.getElementById("inputText");
   input.value = "";
 }
+
+document.getElementById("inputText").addEventListener("input", function () {
+  const str = this.value;
+  console.log("🦐入力された値：", str);
+
+  const strArray = str.split("");
+  console.log("👀配列：", strArray);
+
+  if (!checkInput(str)) {
+    document.getElementById("result").innerText = "使用できない文字が含まれています。";
+    return;
+  } else {
+    document.getElementById("result").innerText = "";
+    return;
+  }
+})
