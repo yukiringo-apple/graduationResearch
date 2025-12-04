@@ -58,8 +58,11 @@ def send_text():
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(json_data, f, ensure_ascii=False, indent=2)
 
-    # ✅ 打刻中ステータス登録
-    print_status[next_id] = "printing"
+    # ✅ 初期ステータス
+    print_status[next_id] = {
+        "status": "printing",
+        "message": "打刻中"
+    }
 
     # Aruduino送信
     # スレッド実行
@@ -75,9 +78,13 @@ def send_text():
 # ✅ 打刻状態を確認するAPI
 @app.route('/status/<int:print_id>')
 def check_status(print_id):
-    status = print_status.get(print_id, "none")
-    return jsonify({"status": status})
-
+    data = print_status.get(print_id)
+    if data is None:
+        return jsonify({
+            "status": "none",
+            "message": "ステータス不明"
+        })
+    return jsonify(data)
 
 if __name__ == "__main__":
     # WERKZEUG_RUN_MAIN = True のときだけ Arduino 初期化

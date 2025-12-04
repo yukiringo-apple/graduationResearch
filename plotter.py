@@ -25,7 +25,7 @@ def initialize():
 def send_dot(d):
     global ser
     if ser is None:
-        return
+        raise RuntimeError("シリアル未接続")
     if 1 <= d <= 6:
         ser.write(f"{d}\n".encode())
         time.sleep(DELAY_DOT)
@@ -40,30 +40,38 @@ def send_pattern(pattern):
 def send_braille_data(braille_data):
     global ser
     if ser is None:
-        return False
+        raise RuntimeError("Arduinoが接続されていません")
 
     for item in braille_data:
         send_pattern(item["pattern"])
 
     ser.write(b"HOME\n")
     time.sleep(2)
-    return True
 
 
 def send_history_by_id(target_id, status_dict):
     file_path = 'historyText.json'
 
-    if not os.path.exists(file_path):
-        status_dict[target_id] = "error"
-        return
+    try:
+        if not os.path.exists(file_path):
+            raise FileNotFoundError("履歴ファイルが存在しません")
 
-    with open(file_path, 'r', encoding='utf-8') as f:
-        history = json.load(f)
+        with open(file_path, 'r', encoding='utf-8') as f:
+            history = json.load(f)
 
-    for item in history:
-        if item["id"] == target_id:
-            send_braille_data(item["brailleData"])
-            status_dict[target_id] = "done"   # ✅ 完了通知
-            return
+        for item in history:
+            if item["id"] == target_id:
+                send_braille_data(item["brailleData"])
+                status_dict[target_id] = {
+                    "status": "done",
+                    "message": "打刻完了"
+                }
+                return
 
-    status_dict[target_id] = "error"
+        raise ValueError("指定されたIDが見つかりません")
+
+    except Exception as e:
+        status_dict[target_id] = {
+            "status": "error",
+            "message": str(e)   # ✅ エラー内容を格納
+        }

@@ -1,21 +1,86 @@
 // /static/index.js
+const printDialog = document.getElementById("printDialog");
+const sendBtn = document.getElementById("sendBtn");
+const inputText = document.getElementById("inputText");
+
+// 送信ボタンと入力フィールドの有効/無効を切り替える関数
+function setInputEnabled(enabled) {
+  sendBtn.disabled = !enabled;
+  inputText.readOnly = !enabled;
+  // 他の入力ボタンも無効化したい場合はここに追加
+  document.querySelectorAll('.tab-content button').forEach(btn => {
+    btn.disabled = !enabled;
+  });
+  document.querySelectorAll('.edit-buttons button').forEach(btn => {
+    btn.disabled = !enabled;
+  });
+}
+
+// 打刻状態を定期的に確認するポーリング関数
+async function pollStatus(id) {
+  const resultElement = document.getElementById("result");
+  const dialogMessage = document.getElementById("dialogMessage");
+  let statusCheckInterval = setInterval(async () => {
+    try {
+      const res = await fetch(`/status/${id}`);
+      const data = await res.json();
+
+      dialogMessage.innerText = data.message; // ダイアログのメッセージを更新
+
+      if (data.status === "done" || data.status === "error") {
+        clearInterval(statusCheckInterval); // ポーリング停止
+        printDialog.close(); // ダイアログを閉じる
+        setInputEnabled(true); // 入力再開
+
+        // 結果メッセージの表示
+        if (data.status === "done") {
+          resultElement.innerText = `✅ 打刻完了: ${data.message}`;
+          resultElement.style.color = "green";
+        } else {
+          resultElement.innerText = `❌ エラー: ${data.message}`;
+          resultElement.style.color = "red";
+        }
+      } else if (data.status === "printing") {
+        resultElement.innerText = "打刻機が動作中です...";
+        resultElement.style.color = "#374151";
+      }
+
+    } catch (error) {
+      clearInterval(statusCheckInterval);
+      printDialog.close();
+      setInputEnabled(true);
+      resultElement.innerText = `通信エラーが発生しました: ${error.message}`;
+      resultElement.style.color = "red";
+    }
+  }, 1000); // 1秒ごとに確認
+}
+
+
 async function sendText() {
-  let input = document.getElementById("inputText").value;
+  let input = inputText.value;
+  const resultElement = document.getElementById("result");
 
   // 入力チェック：空白や未入力の場合
   if (!input.trim()) {
-    document.getElementById("result").innerText = "文字を入力してください。";
+    resultElement.innerText = "文字を入力してください。";
+    resultElement.style.color = "red";
     return;
   }
 
-  // ひらがなのみかチェック
-  // if (!checkHiragana(input)) {
-  //   document.getElementById("result").innerText = "ひらがなのみ入力してください。";
-  //   return;
-  // }
+  // 入力チェック（checkInputの結果を使用）
+  if (!checkInput(input)) {
+    resultElement.innerText = "使用できない文字が含まれています。";
+    resultElement.style.color = "red";
+    return;
+  }
 
   // 全角 -> 半角
   input = toHalfWidth(input);
+
+  // 打刻中ダイアログ表示と入力無効化
+  resultElement.innerText = "";
+  printDialog.showModal();
+  setInputEnabled(false);
 
   // データ作成
   const data = {
@@ -24,26 +89,101 @@ async function sendText() {
   };
 
   // Flaskサーバーに送信
-  const res = await fetch("/send", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(data)
-  });
+  try {
+    const res = await fetch("/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
 
-  const result = await res.json();
-  document.getElementById("result").innerText = result.message;
+    if (!res.ok) {
+      throw new Error(`サーバーエラー: ${res.status}`);
+    }
+
+    const result = await res.json();
+    resultElement.innerText = result.message;
+    resultElement.style.color = "#374151";
+
+    // 打刻状態のポーリング開始
+    pollStatus(result.id);
+
+  } catch (error) {
+    // 送信自体が失敗した場合
+    printDialog.close();
+    setInputEnabled(true);
+    resultElement.innerText = `❌ 送信エラー: ${error.message}`;
+    resultElement.style.color = "red";
+  }
 }
 
+/*
+以下、checkInput, addKana, タブ切り替え, ボタン動的生成, deleteOne, clearAll, 入力イベントリスナー, toHalfWidth は変更ありませんが、
+`inputText`を使用する関数はグローバル変数を使用するように修正します。
+*/
 
+// ▼ 入力欄に追加
+function addKana(kana) {
+  inputText.value += kana;
+}
 
+// ▼ 1文字削除（拗音は2文字まとめて削除）
+function deleteOne() {
+  if (!inputText.readOnly) { // 打刻中は操作不可
+    let text = inputText.value;
+
+    if (text.length === 0) return;
+
+    // 拗音の一覧（2文字扱い）
+    const youonList = [
+      "きゃ", "きゅ", "きょ", "ぎゃ", "ぎゅ", "ぎょ",
+      "しゃ", "しゅ", "しょ", "じゃ", "じゅ", "じょ",
+      "ちゃ", "ちゅ", "ちょ", "ぢゃ", "ぢゅ", "ぢょ",
+      "にゃ", "にゅ", "にょ",
+      "ひゃ", "ひゅ", "ひょ", "びゃ", "びゅ", "びょ",
+      "ぴゃ", "ぴゅ", "ぴょ",
+      "みゃ", "みゅ", "みょ",
+      "りゃ", "りゅ", "りょ"
+    ];
+
+    // 末尾2文字が拗音か判定
+    const last2 = text.slice(-2);
+    if (youonList.includes(last2)) {
+      inputText.value = text.slice(0, -2); // 2文字まとめて削除
+    } else {
+      inputText.value = text.slice(0, -1); // 通常は1文字削除
+    }
+  }
+}
+
+// ▼ 全消し
+function clearAll() {
+  if (!inputText.readOnly) { // 打刻中は操作不可
+    inputText.value = "";
+  }
+}
+
+// 既存のイベントリスナーで `document.getElementById("inputText")` を `inputText` に変更
+inputText.addEventListener("input", function () {
+  const str = this.value;
+  console.log("🦐入力された値：", str);
+
+  if (!checkInput(str)) {
+    document.getElementById("result").innerText = "使用できない文字が含まれています。";
+    document.getElementById("result").style.color = "red";
+    return;
+  } else {
+    document.getElementById("result").innerText = "";
+    document.getElementById("result").style.color = "#374151";
+    return;
+  }
+})
+
+// === checkInput と toHalfWidth は省略 (中身変更なし) ===
 function checkInput(input) {
   // ① 使用可能な文字だけかチェック（一次フィルタ）
   const allowRegex = /^[0-9a-zA-Zａ-ｚＡ-Ｚぁ-ゖ！？!?,.、。ーっ]+$/;
-
-  // .test -> 正規表現のメソッド
-  // 一致すると true が返ってくる
   if (!allowRegex.test(input)) return false;
 
   // ② 小文字（ぁぃぅぇぉ）の禁止
@@ -58,15 +198,15 @@ function checkInput(input) {
   return true;
 }
 
-
-
-// ▼ 入力欄に追加
-function addKana(kana) {
-  const input = document.getElementById("inputText");
-  input.value += kana;
+// 全角 -> 半角（英数字）
+function toHalfWidth(str) {
+  str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+  return str;
 }
 
-// ▼ タブ切り替え
+// === タブ切り替えは省略 (中身変更なし) ===
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     // タブボタンの active を切り替え
@@ -80,171 +220,37 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
-// ▼ テキストからボタンを動的生成
-document.querySelectorAll('.kana-grid').forEach(grid => {
-  // htmlから.kana-gridの一覧をそのまま取得する
-  const text = grid.textContent.trim();
-  console.log("text\n", text);
+// === テキストからボタンを動的生成 (デザイン統一のため、kana-gridとalpha-gridの処理を統一し、行のクラスを調整) ===
 
-  // 行ごとに分割
-  const lines = text.split(/\n+/);
-  console.log("lines", lines);
+// 統一されたボタン生成ロジック
+function createButtonsFromText(gridElement, isAlphaGrid) {
+  const text = gridElement.textContent.trim();
+  const lines = text.split(/\n+/).filter(line => line.trim() !== ''); // 空行を除去
 
-  // htmlファイルの元のテキストを削除
-  grid.textContent = "";
+  gridElement.textContent = ""; // 元のテキストを削除
 
   lines.forEach(line => {
+    // デザイン統一のため、行のクラス名を変更
     const row = document.createElement("div");
-    row.className = "kana-row";
+    row.className = isAlphaGrid ? "input-button-row alpha-row" : "input-button-row kana-row";
 
-    const chars = line.split(/\s+/);
-    console.log("chars", chars);
+    const chars = line.split(/\s+/).filter(ch => ch !== "");
 
     chars.forEach(ch => {
-      if (ch != "") {
-        const btn = document.createElement("button");
-        btn.textContent = ch;
-        btn.onclick = () => addKana(ch);
-        row.append(btn);
-      }
-    })
+      const btn = document.createElement("button");
+      btn.textContent = ch;
+      btn.onclick = () => addKana(ch);
+      row.append(btn);
+    });
 
-    grid.appendChild(row);
-  })
+    gridElement.appendChild(row);
+  });
+}
+
+document.querySelectorAll('.kana-grid').forEach(grid => {
+  createButtonsFromText(grid, false);
 });
 
 document.querySelectorAll('.alpha-grid').forEach(grid => {
-  const text = grid.textContent.trim();
-
-  const lines = text.split(/\n+/);
-  console.log("alpha-items\n", lines);
-
-  grid.textContent = ""; // 一旦消す
-
-  lines.forEach(line => {
-    const row = document.createElement("div");
-    row.className = "alpha-row";
-
-    const chars = line.split(/\s+/);
-    console.log("chars", chars);
-
-    chars.forEach(ch => {
-      if (ch != "") {
-        const btn = document.createElement("button");
-        btn.textContent = ch;
-        btn.onclick = () => addKana(ch);
-        row.append(btn);
-      }
-    })
-
-    grid.appendChild(row);
-  })
-});
-
-
-// ▼ 1文字削除（拗音は2文字まとめて削除）
-function deleteOne() {
-  const input = document.getElementById("inputText");
-  let text = input.value;
-
-  if (text.length === 0) return;
-
-  // 拗音の一覧（2文字扱い）
-  const youonList = [
-    "きゃ", "きゅ", "きょ", "ぎゃ", "ぎゅ", "ぎょ",
-    "しゃ", "しゅ", "しょ", "じゃ", "じゅ", "じょ",
-    "ちゃ", "ちゅ", "ちょ", "ぢゃ", "ぢゅ", "ぢょ",
-    "にゃ", "にゅ", "にょ",
-    "ひゃ", "ひゅ", "ひょ", "びゃ", "びゅ", "びょ",
-    "ぴゃ", "ぴゅ", "ぴょ",
-    "みゃ", "みゅ", "みょ",
-    "りゃ", "りゅ", "りょ"
-  ];
-
-  // 末尾2文字が拗音か判定
-  const last2 = text.slice(-2);
-  if (youonList.includes(last2)) {
-    input.value = text.slice(0, -2); // 2文字まとめて削除
-  } else {
-    input.value = text.slice(0, -1); // 通常は1文字削除
-  }
-}
-
-// ▼ 全消し
-function clearAll() {
-  const input = document.getElementById("inputText");
-  input.value = "";
-}
-
-document.getElementById("inputText").addEventListener("input", function () {
-  const str = this.value;
-  console.log("🦐入力された値：", str);
-
-  const strArray = str.split("");
-  console.log("👀配列：", strArray);
-
-  if (!checkInput(str)) {
-    document.getElementById("result").innerText = "使用できない文字が含まれています。";
-    return;
-  } else {
-    document.getElementById("result").innerText = "";
-    return;
-  }
-})
-
-
-// 全角 -> 半角（英数字）
-function toHalfWidth(str) {
-  str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
-    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
-  });
-  return str;
-}
-
-
-
-const sendBtn = document.getElementById("sendBtn");
-const dialog = document.getElementById("printDialog");
-
-sendBtn.addEventListener("click", async () => {
-
-  // ✅ ダイアログ表示（ここが「開くタイミング」）
-  dialog.showModal();
-
-  const res = await fetch("/send", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      text: document.getElementById("inputText").value,
-      time: new Date().toISOString()
-    })
-  });
-
-  const data = await res.json();
-  const printId = data.id;
-
-  // ✅ 打刻完了を監視
-  const timer = setInterval(async () => {
-    const statusRes = await fetch(`/status/${printId}`);
-    const statusData = await statusRes.json();
-
-    if (statusData.status === "done") {
-      clearInterval(timer);
-
-      // ✅ ダイアログを閉じる
-      dialog.close();
-
-      // ✅ JSイベント発火
-      document.dispatchEvent(new CustomEvent("printFinished", {
-        detail: { id: printId }
-      }));
-    }
-  }, 1000);
-});
-
-
-// ✅ 打刻終了イベント受信
-document.addEventListener("printFinished", (e) => {
-  console.log("打刻完了:", e.detail.id);
-  alert("打刻が完了しました！");
+  createButtonsFromText(grid, true);
 });
