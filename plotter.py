@@ -1,3 +1,5 @@
+# plotter.py
+
 import serial
 import time
 import json
@@ -46,6 +48,7 @@ def send_braille_data(braille_data):
     ser.write(b"HOME\n")
     time.sleep(2)
     print("原点に戻しました")
+    return True
 
 # 履歴ID指定で打刻
 def send_history_by_id(target_id):

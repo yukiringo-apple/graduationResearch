@@ -1,6 +1,6 @@
 // /static/index.js
 async function sendText() {
-  const input = document.getElementById("inputText").value;
+  let input = document.getElementById("inputText").value;
 
   // 入力チェック：空白や未入力の場合
   if (!input.trim()) {
@@ -9,10 +9,13 @@ async function sendText() {
   }
 
   // ひらがなのみかチェック
-  if (!checkHiragana(input)) {
-    document.getElementById("result").innerText = "ひらがなのみ入力してください。";
-    return;
-  }
+  // if (!checkHiragana(input)) {
+  //   document.getElementById("result").innerText = "ひらがなのみ入力してください。";
+  //   return;
+  // }
+
+  // 全角 -> 半角
+  input = toHalfWidth(input);
 
   // データ作成
   const data = {
@@ -33,10 +36,14 @@ async function sendText() {
   document.getElementById("result").innerText = result.message;
 }
 
+
+
 function checkInput(input) {
   // ① 使用可能な文字だけかチェック（一次フィルタ）
   const allowRegex = /^[0-9a-zA-Zａ-ｚＡ-Ｚぁ-ゖ！？!?,.、。ーっ]+$/;
 
+  // .test -> 正規表現のメソッド
+  // 一致すると true が返ってくる
   if (!allowRegex.test(input)) return false;
 
   // ② 小文字（ぁぃぅぇぉ）の禁止
@@ -44,7 +51,7 @@ function checkInput(input) {
   if (smallVowelRegex.test(input)) return false;
 
   // ③ 拗音の不正組み合わせを禁止
-  // 許可：きぎしじちぢにひびみり + ゃゅょ のみ
+  // 許可：きぎしじちぢにひびぴみり + ゃゅょ のみ
   const invalidYouonRegex = /(?<![きぎしじちぢにひびぴみり])[ゃゅょ]/;
   if (invalidYouonRegex.test(input)) return false;
 
@@ -184,3 +191,12 @@ document.getElementById("inputText").addEventListener("input", function () {
     return;
   }
 })
+
+
+// 全角 -> 半角（英数字）
+function toHalfWidth(str) {
+  str = str.replace(/[Ａ-Ｚａ-ｚ０-９]/g, function (s) {
+    return String.fromCharCode(s.charCodeAt(0) - 0xFEE0);
+  });
+  return str;
+}

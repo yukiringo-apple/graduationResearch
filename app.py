@@ -1,3 +1,5 @@
+# app.py
+
 from flask import Flask, request, jsonify, render_template
 import json
 import threading
@@ -68,3 +70,5 @@ if __name__ == "__main__":
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         plotter.initialize()
     app.run(debug=True)
+
+
