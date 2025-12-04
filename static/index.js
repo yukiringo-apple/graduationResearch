@@ -200,3 +200,51 @@ function toHalfWidth(str) {
   });
   return str;
 }
+
+
+
+const sendBtn = document.getElementById("sendBtn");
+const dialog = document.getElementById("printDialog");
+
+sendBtn.addEventListener("click", async () => {
+
+  // ✅ ダイアログ表示（ここが「開くタイミング」）
+  dialog.showModal();
+
+  const res = await fetch("/send", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: document.getElementById("inputText").value,
+      time: new Date().toISOString()
+    })
+  });
+
+  const data = await res.json();
+  const printId = data.id;
+
+  // ✅ 打刻完了を監視
+  const timer = setInterval(async () => {
+    const statusRes = await fetch(`/status/${printId}`);
+    const statusData = await statusRes.json();
+
+    if (statusData.status === "done") {
+      clearInterval(timer);
+
+      // ✅ ダイアログを閉じる
+      dialog.close();
+
+      // ✅ JSイベント発火
+      document.dispatchEvent(new CustomEvent("printFinished", {
+        detail: { id: printId }
+      }));
+    }
+  }, 1000);
+});
+
+
+// ✅ 打刻終了イベント受信
+document.addEventListener("printFinished", (e) => {
+  console.log("打刻完了:", e.detail.id);
+  alert("打刻が完了しました！");
+});

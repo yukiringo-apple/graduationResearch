@@ -27,11 +27,15 @@
                         </rt></ruby>す</button>
             </div>
             <!-- 送信ボタン -->
-            <button onclick="sendText()" class="btn-send"><img src="./../static/img/kamiHikouki.svg"
+            <button onclick="sendText()" class="btn-send" id="sendBtn"><img src="./../static/img/kamiHikouki.svg"
                     class="img-icon"><ruby>送<rt>そう</rt>信<rt>しん</rt></ruby></button>
 
             <p id="result"></p>
         </dev>
+
+        <dialog id="printDialog">
+            <p>打刻中です…</p>
+        </dialog>
 
         <div class="input-panel">
             <!-- タブ切り替え -->
