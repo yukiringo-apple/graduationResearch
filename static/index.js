@@ -37,20 +37,30 @@ async function pollStatus(id) {
           resultElement.innerText = `✅ 打刻完了: ${data.message}`;
           resultElement.style.color = "green";
         } else {
-          resultElement.innerText = `❌ エラー: ${data.message}`;
+          // ❌ エラー時の表示を分離 ❌
+          // ユーザー向けメッセージを表示
+          let displayMessage = `❌ エラー: ${data.message}`;
+
+          // デバッグ用の詳細情報があれば追加（開発環境向け）
+          if (data.debug_detail) {
+            // 例: コンソールに出力 or 開発者向けに詳細なエラーメッセージをHTMLに追加
+            console.error(`[ID: ${id}] 打刻詳細エラー: ${data.debug_detail}`);
+            // ユーザーインターフェースに詳細を出したい場合は、以下のように追加します
+            // displayMessage += `\n (詳細: ${data.debug_detail})`;
+
+            // ユーザーが分かりやすいように「詳細なログはコンソールを参照してください」と案内
+            // displayMessage += `\n (詳細は開発者コンソール (F12) を参照してください)`;
+          }
+
+          resultElement.innerText = displayMessage;
           resultElement.style.color = "red";
         }
       } else if (data.status === "printing") {
-        resultElement.innerText = "打刻機が動作中です...";
-        resultElement.style.color = "#374151";
+        // ... (既存のコード) ...
       }
 
     } catch (error) {
-      clearInterval(statusCheckInterval);
-      printDialog.close();
-      setInputEnabled(true);
-      resultElement.innerText = `通信エラーが発生しました: ${error.message}`;
-      resultElement.style.color = "red";
+      // ... (既存の通信エラー処理) ...
     }
   }, 1000); // 1秒ごとに確認
 }

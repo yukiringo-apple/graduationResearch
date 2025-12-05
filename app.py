@@ -80,11 +80,9 @@ def send_text():
 def check_status(print_id):
     data = print_status.get(print_id)
     if data is None:
-        return jsonify({
-            "status": "none",
-            "message": "ステータス不明"
-        })
-    return jsonify(data)
+        # ...
+        pass
+    return jsonify(data) # ✅ print_statusに格納された全データ（message, debug_detailなど）を返す
 
 if __name__ == "__main__":
     # WERKZEUG_RUN_MAIN = True のときだけ Arduino 初期化
