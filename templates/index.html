@@ -16,7 +16,9 @@
             <p><ruby>右<rt>みぎ</rt></ruby>のキーボードから<ruby>文<rt>も</rt>字<rt>じ</rt></ruby>を<ruby>入<rt>にゅう</rt>力<rt>りょく</rt>
                 </ruby>しよう！</p>
             <!-- 文字の入力を受け付ける -->
-            <input type="text" id="inputText" placeholder="文字を入力してください" readonly>
+            <!-- <input type="text" id="inputText" placeholder="文字を入力してください" readonly> -->
+            <input type="text" id="inputText" placeholder="文字を入力してください">
+
             <!-- 削除ボタン各種 -->
             <div class="edit-buttons">
                 <button onclick="deleteOne()"><img src="./../static/img/backSpace.svg" class="img-icon">１<ruby>文<rt>も
@@ -25,11 +27,16 @@
                         </rt></ruby>す</button>
             </div>
             <!-- 送信ボタン -->
-            <button onclick="sendText()" class="btn-send"><img src="./../static/img/kamiHikouki.svg"
+            <button onclick="sendText()" class="btn-send" id="sendBtn"><img src="./../static/img/kamiHikouki.svg"
                     class="img-icon"><ruby>送<rt>そう</rt>信<rt>しん</rt></ruby></button>
 
             <p id="result"></p>
         </dev>
+
+        <dialog id="printDialog">
+            <p id="dialogMessage">打刻中です…</p>
+        </dialog>
+
 
         <div class="input-panel">
             <!-- タブ切り替え -->
@@ -115,7 +122,7 @@
     </div>
 
     <script src="{{ url_for('static', filename='index.js') }}"></script>
-    <script src="{{ url_for('static', filename='chackHiragana') }}"></script>
+    <!-- <script src="{{ url_for('static', filename='chackHiragana') }}"></script> -->
 
 </body>
 

@@ -183,9 +183,9 @@ button:hover {
     color: #fff;
 }
 
-#inputText {
+/* #inputText {
     pointer-events: none;
-}
+} */
 
 /* コンテンツの切り替え */
 .tab-content {
@@ -209,7 +209,7 @@ button:hover {
 .alpha-grid {
     display: grid;
     /* grid-template-rows: repeat(10,auto); */
-    gap:8px;
+    gap: 8px;
     padding: 5px 0 20px 0;
 }
 
@@ -240,7 +240,7 @@ button:hover {
 
 .alpha-row {
     display: grid;
-    grid-template-columns: repeat(7,auto);
+    grid-template-columns: repeat(7, auto);
     gap: 4px;
     margin-bottom: 6px;
     flex-direction: row;
@@ -248,4 +248,22 @@ button:hover {
 
 .alpha-row button {
     padding: 30px 10px;
+}
+
+/* ▼ ダイアログのデザイン追加 */
+dialog {
+    border: none;
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    /* モーダル背景 */
+    background: white;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
 }
