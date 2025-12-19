@@ -133,12 +133,12 @@ async function sendText() {
 `inputText`を使用する関数はグローバル変数を使用するように修正します。
 */
 
-// ▼ 入力欄に追加
+// 入力欄に追加
 function addKana(kana) {
   inputText.value += kana;
 }
 
-// ▼ 1文字削除（拗音は2文字まとめて削除）
+// 1文字削除（拗音は2文字まとめて削除）
 function deleteOne() {
   if (!inputText.readOnly) { // 打刻中は操作不可
     let text = inputText.value;
