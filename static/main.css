@@ -130,11 +130,11 @@ button:hover {
 }
 
 /* ボタンのグリッドレイアウト*/
-.kana-grid {
+/* .kana-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
     gap: 10px;
-}
+} */
 
 /* ひらがなボタンデザイン */
 .kana-btn {
@@ -197,6 +197,10 @@ button:hover {
 .tab-btn:hover {
     background: #375b9e;
     color: #fff;
+}
+
+#tab-sulkySound button{
+    font-size: 1.2em;
 }
 
 /* #inputText {
