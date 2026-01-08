@@ -164,16 +164,18 @@ void moveToDot(int d){
 
 // 次の文字の位置を管理
 void advanceChar(){
-  // ★ 文字終了時にYを行基準へ戻す
+  // Y軸を戻す
   moveTo(currentX, lineBaseY);
 
   charCount++;
 
+  // 打ち終わった判定を厳密にする
   if(charCount >= MAX_CHARS_PER_LINE){
     newLine();
-    charCount = 0;
-  }else{
-    startX += charPitch;
+  } else {
+    // 次の文字位置を確定させる
+    startX = charCount * charPitch; 
+    moveTo(startX, lineBaseY);
   }
 }
 
@@ -181,15 +183,15 @@ void advanceChar(){
 
 // 最初の文字の一番目の部分を原点として復帰
 void returnToDot1(){
-  moveTo(DOT1_OFFSET_X, DOT1_OFFSET_Y);
-  currentX = DOT1_OFFSET_X;
-  currentY = DOT1_OFFSET_Y;
+  moveTo(0.0, 0.0);
 
-  lineBaseY = currentY;   // ★ 追加
-  startX = 0;
+  currentX = 0.0;
+  currentY = 0.0;
+  lineBaseY = 0.0;
+  startX = 0.0;
   charCount = 0;
 
-  Serial.println("RESET_TO_DOT1");
+  Serial.println("HOME_COMPLETED");
 }
 
 
@@ -211,12 +213,13 @@ void loop(){
     String cmd=Serial.readStringUntil('\n');
     cmd.trim();
 
+
+    // 原点復帰の場合
+    if(cmd=="DOT1") returnToDot1();
     // 次の文字移動する場合
-    if(cmd=="CHAR_DONE") advanceChar();
+    else if(cmd=="CHAR_DONE") advanceChar();
     // 改行
     else if(cmd == "NEWLINE")newLine();
-    // 原点復帰の場合
-    else if(cmd=="DOT1") returnToDot1();
     else if(cmd == "SUBCELL_NEXT"){
     // 濁点 → 本体文字用に少し右へ
     startX += charPitch * -0.9;  // 好みで調整

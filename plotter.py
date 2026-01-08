@@ -98,27 +98,33 @@ def send_pattern(pattern):
 
 
 # --- 1文字処理（数字・英字対応） ---
-def send_char(ch):
+def send_char(ch, send_char_done=True):
     patterns = flatten_pattern(ch)
     if not patterns:
         return
 
     for p in patterns:
-        send_pattern(p)             # 6ドット分を送信
-        if ser is not None:
-            # 1マス分が終わったら CHAR_DONE を送る
-            ser.write(b"CHAR_DONE\n") # 1マス打ち終わるごとにArduinoへ通知
-            time.sleep(0.1)             # Arduinoの移動待ち
+        send_pattern(p)
+        if send_char_done and ser is not None:
+            ser.write(b"CHAR_DONE\n")
+            time.sleep(0.1)
+
 
 
 
 def send_braille_data(braille_data):
-
-
-    # ✅ シリアル通信のエラー処理を強化
     try:
-        for item in braille_data:
-            send_char(item["char"])
+        # 新規打刻は必ず原点から
+        ser.write(b"DOT1\n")
+        time.sleep(1.0)
+
+        for i, item in enumerate(braille_data):
+            is_last = (i == len(braille_data) - 1)
+            send_char(item["char"], send_char_done=not is_last)
+
+        time.sleep(0.5)
+        ser.write(b"DOT1\n")
+
     except serial.SerialTimeoutException as e:
         raise RuntimeError(f"シリアル書き込みタイムアウト。\n機器の応答を確認してください。詳細: {e}")
     except Exception as e:
