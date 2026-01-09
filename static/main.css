@@ -1,6 +1,6 @@
 /* /static/main.css */
 
-/* 画面全体を中央配置 */
+/* 画面全体 */
 body {
     font-family: "メイリオ", sans-serif;
     margin: 0;
@@ -13,21 +13,25 @@ body {
     /* 上揃え */
 }
 
+p {
+    text-align: center;
+}
+
 /* カードデザイン */
 .container {
     background: white;
     padding: 40px 50px;
     border-radius: 16px;
     box-shadow: 0 8px 20px rgba(111, 111, 111, 0.1);
-    text-align: center;
+    /* text-align: center; */
     width: 90%;
     max-width: 1080px;
 
     display: flex;
     /* align-items: center; */
-    /* ← 中央寄せ */
+    /* 中央寄せ */
     gap: 50px;
-    /* ← 余白 */
+    /* 余白 */
 }
 
 .img-icon {
@@ -45,6 +49,8 @@ h1 {
     margin-bottom: 24px;
     font-size: 24px;
     color: #333;
+    letter-spacing: 0.3em;
+    text-align: center;
 }
 
 .flex-sendBox {
@@ -53,7 +59,7 @@ h1 {
 }
 
 /* 入力欄とボタン */
-input[type="text"] {
+textarea {
     width: 100%;
     padding: 12px;
     border-radius: 8px;
@@ -61,6 +67,14 @@ input[type="text"] {
     box-sizing: border-box;
     margin-bottom: 15px;
     font-size: 16px;
+    /* 縦の高さを可変式にする */
+    field-sizing: content;
+    /* 半角入力の時に横幅を伸ばさないようにする */
+    overflow-wrap: anywhere;
+}
+
+.edit-buttons {
+    text-align: center;
 }
 
 /* ボタン */
@@ -75,6 +89,7 @@ input[type="text"] {
     cursor: pointer;
     transition: 0.2s;
     margin-bottom: 10px;
+    text-align: center;
 }
 
 button:hover {
@@ -92,6 +107,9 @@ button:hover {
     cursor: pointer;
     transition: 0.2s;
     margin-bottom: 10px;
+    /* text-align: center; */
+    display: block;
+    margin: auto;
 }
 
 .btn-send:hover {
@@ -111,7 +129,7 @@ button:hover {
     width: 100%;
 }
 
-/* ボタンのグリッドレイアウト（スマホ対応） */
+/* ボタンのグリッドレイアウト*/
 .kana-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -137,16 +155,14 @@ button:hover {
     background: #9ca3af;
 }
 
-/* ▼ タブ全体 */
+/* タブ全体 */
 .input-panel {
     width: 100%;
     max-height: 60vh;
-    /* 画面の60%まで表示、あとはスクロール */
     overflow-y: auto;
     /* スクロール */
     padding-bottom: 20px;
-    /* 指で押しやすい余白 */
-    border-top: 1px solid #e5e7eb;
+    /* border-top: 1px solid #e5e7eb; */
 }
 
 /* タブボタン */
@@ -178,9 +194,14 @@ button:hover {
     color: #fff;
 }
 
-#inputText {
-    pointer-events: none;
+.tab-btn:hover {
+    background: #375b9e;
+    color: #fff;
 }
+
+/* #inputText {
+    pointer-events: none;
+} */
 
 /* コンテンツの切り替え */
 .tab-content {
@@ -194,23 +215,49 @@ button:hover {
 /* 文字ボタンのグリッド */
 .kana-grid {
     display: grid;
+    grid-template-columns: repeat(10, auto);
     /* grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); */
     gap: 8px;
     padding: 5px 0 20px 0;
     /* 内側余白調整 */
 }
 
-.kana-grid button {
+/* グリッドの共通設定 */
+.alpha-grid {
+    display: grid;
+    gap: 8px;
+    padding: 5px 0 20px 0;
+    /* justify-content: stretch; */
+}
+
+/* 数字：10列均等 */
+/* #tab-number .alpha-grid { */
+/* grid-template-rows: repeat(10, 1fr); */
+/* } */
+
+/* 英字：7列均等（文字幅を無視して7等分） */
+/* #tab-alpha .alpha-grid { */
+/* grid-template-rows: repeat(7, 1fr); */
+/* } */
+
+/* 記号：6列均等 */
+/* #tab-symbol .alpha-grid { */
+/* grid-template-rows: repeat(6, 1fr); */
+/* } */
+
+.layout-grid button {
     padding: 12px;
-    font-size: 18px;
+    font-size: 22px;
     border: none;
     border-radius: 8px;
     background: #f3f4f6;
     cursor: pointer;
     transition: 0.2s;
+    width: 100%;
+    box-sizing: border-box;
 }
 
-.kana-grid button:hover {
+.layout-grid button:hover {
     background: #e5e7eb;
 }
 
@@ -218,8 +265,41 @@ button:hover {
     display: flex;
     gap: 4px;
     margin-bottom: 6px;
+    flex-direction: column
 }
 
 .kana-row button {
     padding: 6px 10px;
+}
+
+.alpha-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 6px;
+    flex-direction: row;
+}
+
+.alpha-row button {
+    padding: 30px 10px;
+}
+
+/* ダイアログデザイン */
+dialog {
+    border: none;
+    /* width: 70%;
+    height: 50%; */
+    padding: 100px 200px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    /* モーダル背景 */
+    background: white;
+    font-size: 20px;
+    font-weight: bold;
+    color: #333;
+    text-align: center;
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.5);
 }

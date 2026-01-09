@@ -98,17 +98,19 @@ def send_pattern(pattern):
 
 
 # --- 1文字処理（数字・英字対応） ---
-def send_char(ch, send_char_done=True):
+def send_char(ch, last=False):
     patterns = flatten_pattern(ch)
     if not patterns:
         return
 
     for p in patterns:
         send_pattern(p)
-        if send_char_done and ser is not None:
-            ser.write(b"CHAR_DONE\n")
+        if ser is not None:
+            if last:
+                ser.write(b"CHAR_DONE_LAST\n")
+            else:
+                ser.write(b"CHAR_DONE\n")
             time.sleep(0.1)
-
 
 
 
@@ -120,7 +122,8 @@ def send_braille_data(braille_data):
 
         for i, item in enumerate(braille_data):
             is_last = (i == len(braille_data) - 1)
-            send_char(item["char"], send_char_done=not is_last)
+            send_char(item["char"], last=is_last)
+
 
         time.sleep(0.5)
         ser.write(b"DOT1\n")

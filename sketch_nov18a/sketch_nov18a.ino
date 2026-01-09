@@ -163,21 +163,18 @@ void moveToDot(int d){
 }
 
 // 次の文字の位置を管理
-void advanceChar(){
-  // Y軸を戻す
+void advanceChar(bool moveNext){
   moveTo(currentX, lineBaseY);
-
   charCount++;
 
-  // 打ち終わった判定を厳密にする
   if(charCount >= MAX_CHARS_PER_LINE){
     newLine();
-  } else {
-    // 次の文字位置を確定させる
+  } else if(moveNext) {
     startX = charCount * charPitch; 
     moveTo(startX, lineBaseY);
   }
 }
+
 
 
 
@@ -225,7 +222,7 @@ void loop(){
     startX += charPitch * -0.9;  // 好みで調整
     }
     // デバッグ用　X軸の単体駆動
-    else if(cmd == "R" || cmd == "r"){               // 右へ 10mm
+    else if(cmd == "R" || cmd == "r"){    // 右へ 10mm
       stepX(-10 * stepsPerMm);
     }
     // デバッグ用　X軸の単体駆動

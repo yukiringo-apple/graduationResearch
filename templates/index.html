@@ -6,17 +6,20 @@
     <meta charset="UTF-8">
     <title>点字プロッタ</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='main.css') }}">
+    <link rel="icon" href="/static/favicon.ico">
 </head>
 
 <body>
     <div class="container">
-
         <dev class="flex-sendBox">
-            <h1><ruby>文<rt>も</rt>字<rt>じ</rt>列<rt>れつ</rt></ruby>を<ruby>送<rt>そう</rt>信<rt>しん</rt></ruby></h1>
-            <p><ruby>右<rt>みぎ</rt></ruby>のキーボードから<ruby>文<rt>も</rt>字<rt>じ</rt></ruby>を<ruby>入<rt>にゅう</rt>力<rt>りょく</rt>
+            <!-- <button class="btn-howToUse">使い方</button> -->
+            <h1><ruby>文<rt>も</rt>字<rt>じ</rt></ruby>を<ruby>入<rt>にゅう</rt>力<rt>りょく</rt></ruby></h1>
+            <p>キーボードから<ruby>文<rt>も</rt>字<rt>じ</rt></ruby>を<ruby>入<rt>にゅう</rt>力<rt>りょく</rt>
                 </ruby>しよう！</p>
             <!-- 文字の入力を受け付ける -->
-            <input type="text" id="inputText" placeholder="文字を入力してください" readonly>
+            <!-- <input type="text" id="inputText" placeholder="文字を入力してください" readonly> -->
+            <textarea type="text" id="inputText" placeholder="文字を入力してください"></textarea>
+
             <!-- 削除ボタン各種 -->
             <div class="edit-buttons">
                 <button onclick="deleteOne()"><img src="./../static/img/backSpace.svg" class="img-icon">１<ruby>文<rt>も
@@ -25,11 +28,16 @@
                         </rt></ruby>す</button>
             </div>
             <!-- 送信ボタン -->
-            <button onclick="sendText()" class="btn-send"><img src="./../static/img/kamiHikouki.svg"
+            <button onclick="sendText()" class="btn-send" id="sendBtn"><img src="./../static/img/kamiHikouki.svg"
                     class="img-icon"><ruby>送<rt>そう</rt>信<rt>しん</rt></ruby></button>
 
             <p id="result"></p>
         </dev>
+
+        <dialog id="printDialog">
+            <p id="dialogMessage">打刻中です…</p>
+        </dialog>
+
 
         <div class="input-panel">
             <!-- タブ切り替え -->
@@ -37,42 +45,42 @@
                 <button class="tab-btn active" data-target="tab-hiragana">ひらがな</button>
                 <button class="tab-btn" data-target="tab-dakuon">濁音</button>
                 <button class="tab-btn" data-target="tab-sulkySound">拗音</button>
-                <button class="tab-btn" data-target="tab-number">数字</button>
+                <!-- <button class="tab-btn" data-target="tab-number">数字</button>
                 <button class="tab-btn" data-target="tab-alpha">英字</button>
-                <button class="tab-btn" data-target="tab-symbol">記号</button>
+                <button class="tab-btn" data-target="tab-symbol">記号</button> -->
             </div>
 
             <!-- ひらがな -->
             <div id="tab-hiragana" class="tab-content active">
-                <div class="kana-grid">
+                <div class="kana-grid layout-grid">
                     <!-- 50音 -->
-                    あ い う え お
-                    か き く け こ
-                    さ し す せ そ
-                    た ち つ て と
-                    な に ぬ ね の
-                    は ひ ふ へ ほ
-                    ま み む め も
-                    や ゆ よ
-                    ら り る れ ろ
                     わ を ん
+                    ら り る れ ろ
+                    や ゆ よ
+                    ま み む め も
+                    は ひ ふ へ ほ
+                    な に ぬ ね の
+                    た ち つ て と
+                    さ し す せ そ
+                    か き く け こ
+                    あ い う え お
                 </div>
             </div>
 
             <!-- 濁音 -->
             <div id="tab-dakuon" class="tab-content">
-                <div class="kana-grid">
-                    が ぎ ぐ げ ご
-                    ざ じ ず ぜ ぞ
-                    だ ぢ づ で ど
-                    ば び ぶ べ ぼ
+                <div class="kana-grid layout-grid">
                     ぱ ぴ ぷ ぺ ぽ
+                    ば び ぶ べ ぼ
+                    だ ぢ づ で ど
+                    ざ じ ず ぜ ぞ
+                    が ぎ ぐ げ ご
                 </div>
             </div>
 
             <!-- 拗音 -->
             <div id="tab-sulkySound" class="tab-content">
-                <div class="kana-grid">
+                <div class="kana-grid layout-grid">
                     きゃ きゅ きょ ぎゃ ぎゅ ぎょ
                     しゃ しゅ しょ じゃ じゅ じょ
                     ちゃ ちゅ ちょ ぢゃ ぢゅ ぢょ
@@ -86,22 +94,24 @@
 
             <!-- 数字 -->
             <div id="tab-number" class="tab-content">
-                <div class="kana-grid">
+                <div class="alpha-grid layout-grid">
                     0 1 2 3 4 5 6 7 8 9
                 </div>
             </div>
 
             <!-- 英字 -->
             <div id="tab-alpha" class="tab-content">
-                <div class="kana-grid">
-                    a b c d e f g h i j k l m
-                    n o p q r s t u v w x y z
+                <div class="alpha-grid layout-grid">
+                    a b c d e f g
+                    h i j k l m n
+                    o p q r s t u
+                    v w x y z
                 </div>
             </div>
 
             <!-- 記号 -->
             <div id="tab-symbol" class="tab-content">
-                <div class="kana-grid">
+                <div class="alpha-grid layout-grid">
                     ？ ！ 。 、 ー っ
                 </div>
             </div>
@@ -113,7 +123,7 @@
     </div>
 
     <script src="{{ url_for('static', filename='index.js') }}"></script>
-    <script src="{{ url_for('static', filename='chackHiragana') }}"></script>
+    <!-- <script src="{{ url_for('static', filename='chackHiragana') }}"></script> -->
 
 </body>
 
