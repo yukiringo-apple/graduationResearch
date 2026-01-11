@@ -86,6 +86,7 @@ def send_dot(d):
         return
     if 1 <= d <= 6:
         ser.write(f"{d}\n".encode())
+        ser.flush()           # ★必須
         wait_ack("DOT_OK")
         time.sleep(0.05) 
         print(f"Sent dot: {d}")
