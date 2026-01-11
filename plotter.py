@@ -86,6 +86,8 @@ def send_dot(d):
         return
     if 1 <= d <= 6:
         ser.write(f"{d}\n".encode())
+        wait_ack("DOT_OK")
+        time.sleep(0.05) 
         print(f"Sent dot: {d}")
         time.sleep(DELAY_DOT)
 
@@ -96,44 +98,64 @@ def send_pattern(pattern):
         if on:
             send_dot(dot)
 
+def wait_ack(expected, timeout=5.0):
+    start = time.time()
+    while True:
+        if time.time() - start > timeout:
+            raise TimeoutError(f"ACK待ちタイムアウト: {expected}")
+
+        line = ser.readline().decode().strip()
+        if line == expected:
+            return
+
 
 # --- 1文字処理（数字・英字対応） ---
-def send_char(ch, last=False):
+def send_char(ch):
     patterns = flatten_pattern(ch)
     if not patterns:
         return
 
-    for p in patterns:
-        send_pattern(p)
-        if ser is not None:
-            if last:
-                ser.write(b"CHAR_DONE_LAST\n")
-            else:
-                ser.write(b"CHAR_DONE\n")
-            time.sleep(0.1)
+    for i, p in enumerate(patterns):
+        # 1マス分の点字を打つ
+        for dot, on in enumerate(p, start=1):
+            if on:
+                send_dot(dot)
+
+        # ★最後以外は次のマスへ
+        if i < len(patterns) - 1:
+            ser.write(b"CHAR_DONE\n")
+            ser.flush()
+            wait_ack("CHAR_OK")
+
+    # 最後の1回だけ「この文字は終わり」
+    ser.write(b"CHAR_DONE\n")
+    ser.flush()
+    wait_ack("CHAR_OK")
 
 
 
-def send_braille_data(braille_data):
+
+def send_braille_data(braille_data,chars_per_line=7):
     try:
-        # 新規打刻は必ず原点から
-        ser.write(b"DOT1\n")
-        time.sleep(1.0)
+        go_home()
 
-        for i, item in enumerate(braille_data):
-            is_last = (i == len(braille_data) - 1)
-            send_char(item["char"], last=is_last)
+        count = 0
+        for item in braille_data:
+            send_char(item["char"])
+            count += 1
 
+            if count == chars_per_line:
+                send_newline()
+                count = 0
 
-        time.sleep(0.5)
-        ser.write(b"DOT1\n")
+        go_home()
 
     except serial.SerialTimeoutException as e:
         raise RuntimeError(f"シリアル書き込みタイムアウト。\n機器の応答を確認してください。詳細: {e}")
     except Exception as e:
         raise RuntimeError(f"打刻中の予期せぬエラーが発生しました。\n詳細: {e}")
 
-    return_to_dot1()
+    # return_to_dot1()
 
 
 
@@ -157,6 +179,17 @@ def return_to_dot1():
         ser.write(b"DOT1\n")  # Arduino 側で startX=0 にして左上へ
         time.sleep(1)          # 移動完了まで少し待つ
         print("Returned to Dot 1")
+
+def go_home():
+    ser.write(b"DOT1\n")
+    ser.flush()
+    wait_ack("HOME_OK")
+
+
+def send_newline():
+    ser.write(b"NEWLINE\n")
+    ser.flush()
+    wait_ack("LINE_OK")
 
 
 # --- 履歴IDから送信 ---
